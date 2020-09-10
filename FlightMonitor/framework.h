@@ -9,6 +9,10 @@
 // Windows Header Files
 #include <windows.h>
 #include <windowsx.h>
+
+// MSFS SimConnect Header Files
+#include <SimConnect.h>
+
 // C RunTime Header Files
 #include <stdlib.h>
 #include <malloc.h>
