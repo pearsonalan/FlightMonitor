@@ -13,6 +13,12 @@ struct Size : public tagSIZE {
 
 struct Rect : public tagRECT {
 	Rect() { top = bottom = right = left = 0; }
+	Rect(LONG l, LONG t, LONG r, LONG b) {
+		left = l;
+		top = t;
+		right = r;
+		bottom = b;
+	}
 	int height() { return bottom - top; }
 	int width() { return right - left; }
 	operator LPRECT () { return this; }
@@ -83,6 +89,7 @@ public:
 	HWND getWindow() { return hwnd; }
 	virtual bool create(LPWSTR pstrCmdLine, int nCmdShow);
 	void destroy() { ::DestroyWindow(hwnd); }
+	void setWindowHandle(HWND hwndParam) { hwnd = hwndParam; }
 
 	Rect getClientRect() { Rect r; ::GetClientRect(hwnd, (LPRECT)r); return r; }
 		
@@ -147,13 +154,15 @@ inline bool Dialog::endDialog(int nResult) {
 }
 
 inline BOOL textOut(HDC hdc, int x, int y, const std::wstring& str) {
-	return TextOut(hdc, x, y, str.c_str(), str.size());
+	return TextOutW(hdc, x, y, str.c_str(), static_cast<int>(str.size()));
 }
 
 inline std::wstring loadString(UINT uID) {
 	return App::getSingleton().loadString(uID);
 }
-	
+
+void DebugOut(LPCWSTR format ...);
+
 }  // namespace winfx
 
 #endif

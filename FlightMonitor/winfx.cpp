@@ -97,15 +97,15 @@ LRESULT Window::handleWindowMessage(HWND hwndParam, UINT uMsg, WPARAM wParam, LP
 	return DefWindowProc( hwndParam, uMsg, wParam, lParam );
 }
 
-
-LRESULT CALLBACK WndProc( HWND hwndParam, UINT uMsg, WPARAM wParam, LPARAM lParam ) {
+LRESULT CALLBACK WndProc(HWND hwndParam, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	Window* pWnd;
 
 	if (uMsg == WM_CREATE) {
 		pWnd = (Window*) (((LPCREATESTRUCT)lParam)->lpCreateParams);
-		::SetWindowLong(hwndParam, GWL_USERDATA, (LONG)pWnd);
+		SetWindowLongPtr(hwndParam, GWLP_USERDATA, (LONG_PTR)pWnd);
+		pWnd->setWindowHandle(hwndParam);
 	} else
-		pWnd = (Window*) GetWindowLong(hwndParam, GWL_USERDATA);
+		pWnd = (Window*) GetWindowLongPtr(hwndParam, GWLP_USERDATA);
 
 	if (!pWnd)
 		return DefWindowProc(hwndParam, uMsg, wParam, lParam );
@@ -166,7 +166,7 @@ void Dialog::create() {
 }
 
 int Dialog::doDialogBox() {
-	return DialogBoxParam(App::getSingleton().getInstance(), MAKEINTRESOURCE(idd),
+	return (int) DialogBoxParam(App::getSingleton().getInstance(), MAKEINTRESOURCE(idd),
 						  pwndParent->getWindow(), (DLGPROC)DialogProc, (LPARAM)this);
 }
 
@@ -175,16 +175,25 @@ BOOL CALLBACK DialogProc( HWND hwndParam, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 	if (uMsg == WM_INITDIALOG) {
 		pdlg = (Dialog*) lParam ;
-		::SetWindowLong( hwndParam, DWL_USER, lParam );
+		SetWindowLongPtr( hwndParam, DWLP_USER, lParam );
 		pdlg->hwnd = hwndParam;
 	} else {
-		pdlg = (Dialog*) ::GetWindowLong( hwndParam, DWL_USER );
+		pdlg = (Dialog*) GetWindowLongPtr( hwndParam, DWLP_USER );
 	}
 
 	if (!pdlg)
 		return FALSE;
 
-	return pdlg->handleWindowMessage( hwndParam, uMsg, wParam, lParam );
+	return (BOOL) pdlg->handleWindowMessage( hwndParam, uMsg, wParam, lParam );
+}
+
+void DebugOut(LPCWSTR format ...) {
+	wchar_t buffer[1024];
+	va_list args;
+	va_start(args, format);
+	vswprintf_s(buffer, format, args);
+	va_end(args);
+	OutputDebugStringW(buffer);
 }
 
 App::~App() {
