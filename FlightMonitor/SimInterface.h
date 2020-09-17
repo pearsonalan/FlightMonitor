@@ -32,6 +32,8 @@ public:
 	const std::wstring& getConnectResult() const { return connect_result_;  }
 
 private:
+	bool positionIsValid();
+
 	SimulatorCallbacks* callbacks_;
 	Broadcaster* broadcaster_;
 	bool connected_ = false;

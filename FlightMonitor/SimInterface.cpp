@@ -61,20 +61,37 @@ void SimulatorInterface::onSimDisconnect() {
 }
 
 HRESULT SimulatorInterface::pollSimulator() {
+	if (!connected_) {
+		winfx::DebugOut(L"Invalid call to pollSimulator when not connected.\n");
+		return E_FAIL;
+	}
 	winfx::DebugOut(L"Requesting data from simulator...\n");
 	HRESULT hr = SimConnect_RequestDataOnSimObjectType(sim_, REQUEST_1, DEFINITION_1, 0, SIMCONNECT_SIMOBJECT_TYPE_USER);
 	if (FAILED(hr)) {
 		winfx::DebugOut(L"RequestData failed with error %08x\n", hr);
 	}
 	SimConnect_CallDispatch(sim_, SimDispatchProc, this);
-	if (message_ordinal_ % 4 == 0)
-		broadcaster_->broadcastPositionReport(&data_);
-	broadcaster_->broadcastAttitudeReport(&data_);
-	message_ordinal_++;
+	if (has_data_ && positionIsValid()) {
+		if (message_ordinal_ % 4 == 0)
+			broadcaster_->broadcastPositionReport(&data_);
+		broadcaster_->broadcastAttitudeReport(&data_);
+		message_ordinal_++;
+	}
 	return S_OK;
 }
 
-static void CALLBACK SimDispatchProc(SIMCONNECT_RECV* recv_data, DWORD cbData, void* pContext) {
+bool SimulatorInterface::positionIsValid() {
+	// A hack to determine if the GPS position is a valid position... While on the
+	// loading screen MSFS returns a position approximately at lat/lon 0,0.  This 
+	// rejects that location.
+	return !((data_.gps_lat < 0.1 && data_.gps_lat > -0.1) &&
+		(data_.gps_lon < 0.1 && data_.gps_lon > -0.1) &&
+		data_.gps_alt < 10);
+}
+
+
+static void CALLBACK SimDispatchProc(SIMCONNECT_RECV* recv_data, DWORD cbData, 
+									 void* pContext) {
 	SimulatorInterface* sim = (SimulatorInterface*)pContext;
 	winfx::DebugOut(L"SimDispatchProc: %lx\n", recv_data->dwID);
 	const SIMCONNECT_RECV_OPEN* open_data;
@@ -84,8 +101,10 @@ static void CALLBACK SimDispatchProc(SIMCONNECT_RECV* recv_data, DWORD cbData, v
 	case SIMCONNECT_RECV_ID_OPEN:
 		winfx::DebugOut(L"SIMCONNECT_RECV_ID_OPEN\n");
 		open_data = (SIMCONNECT_RECV_OPEN*)recv_data;
-		winfx::DebugOut(L"RECV_OPEN: %S SIM VER: %d.%d\n", open_data->szApplicationName,
-			open_data->dwApplicationBuildMajor, open_data->dwApplicationBuildMinor);
+		winfx::DebugOut(L"RECV_OPEN: %S SIM VER: %d.%d\n", 
+			open_data->szApplicationName,
+			open_data->dwApplicationBuildMajor, 
+			open_data->dwApplicationBuildMinor);
 		break;
 	case SIMCONNECT_RECV_ID_QUIT:
 		winfx::DebugOut(L"SIMCONNECT_RECV_ID_QUIT\n");
@@ -96,7 +115,8 @@ static void CALLBACK SimDispatchProc(SIMCONNECT_RECV* recv_data, DWORD cbData, v
 		break;
 	case SIMCONNECT_RECV_ID_SIMOBJECT_DATA_BYTYPE:
 		object_data = (SIMCONNECT_RECV_SIMOBJECT_DATA_BYTYPE*)recv_data;
-		winfx::DebugOut(L"SIMCONNECT_RECIV_ID_SIMOBJECT_DATA_BYTYPE: dwRequestID = %d\n", object_data->dwRequestID);
+		winfx::DebugOut(L"SIMCONNECT_RECIV_ID_SIMOBJECT_DATA_BYTYPE: dwRequestID = %d\n", 
+			object_data->dwRequestID);
 		if (object_data->dwRequestID == REQUEST_1) {
 			DWORD object_id = object_data->dwObjectID;
 			const SimData* const sim_data = (SimData*)&object_data->dwData;
