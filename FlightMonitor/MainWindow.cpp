@@ -136,4 +136,6 @@ void MainWindow::onSimDisconnect() {
 
 	// Set a timer to attempt to periodically retry connecting
 	SetTimer(hwnd, ID_TIMER_SIM_CONNECT, 1000, NULL);
+
+	InvalidateRect(hwnd, NULL, TRUE);
 }
