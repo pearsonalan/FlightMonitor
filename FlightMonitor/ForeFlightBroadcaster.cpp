@@ -3,14 +3,10 @@
 #include "ForeFlightBroadcaster.h"
 
 int ForeFlightBroadcaster::InitWinsock() {
-	WORD wVersionRequested;
+	WORD wVersionRequested = MAKEWORD(2, 2);
+
 	WSADATA wsaData;
-	int err;
-
-	// Use the MAKEWORD(lowbyte, highbyte) macro declared in Windef.h
-	wVersionRequested = MAKEWORD(2, 2);
-
-	err = WSAStartup(wVersionRequested, &wsaData);
+	int err = WSAStartup(wVersionRequested, &wsaData);
 	if (err != 0) {
 		// Tell the user that we could not find a usable Winsock DLL.
 		winfx::DebugOut(L"WSAStartup failed with error: %d\n", err);
@@ -39,7 +35,15 @@ HRESULT ForeFlightBroadcaster::init() {
 	send_addr_.sin_port = htons(FF_GPS_PORT);
 
 	// TODO: get correct broadcast address
-	inet_pton(AF_INET, "192.168.86.255", &send_addr_.sin_addr.s_addr);
+	
+	// Could hardcode an address with a net mask...
+	// inet_pton(AF_INET, "192.168.86.255", &send_addr_.sin_addr.s_addr);
+
+	// ... or get addresses and masks with GetAddresses() and GetAdapterInfo()
+
+	// ... or use INADDR_BROADCAST
+	send_addr_.sin_addr.s_addr = INADDR_BROADCAST;
+
 	return S_OK;
 }
 
