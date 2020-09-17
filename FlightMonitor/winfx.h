@@ -1,5 +1,4 @@
-#ifndef _winfx_h_
-#define _winfx_h_
+#pragma once
 
 namespace winfx {
 
@@ -165,4 +164,3 @@ void DebugOut(LPCWSTR format ...);
 
 }  // namespace winfx
 
-#endif
