@@ -11,36 +11,44 @@ public:
 	virtual void onSimDisconnect() = 0;
 };
 
+enum SimulatorInterfaceState {
+	SimInterfaceDisconnected = 0,
+	SimInterfaceConnected,
+	SimInterfaceReceivingData,
+	SimInterfaceInFlight
+};
+
 class SimulatorInterface {
 public:
 	SimulatorInterface(Broadcaster* broadcaster, SimulatorCallbacks* callbacks) :
 		broadcaster_(broadcaster), callbacks_(callbacks) {}
 
 	HRESULT connectSim(HWND hwnd);
-	HRESULT buildDefinition();
 	HRESULT pollSimulator();
+	void close();
 
-	void setSimData(const SimData* simData);
-	void onSimDisconnect();
-
-	bool isConnected() const { return connected_;  }
+	bool isConnected() const { return state_ != SimInterfaceDisconnected;  }
 	const SimData* getData() const {
-		if (has_data_)
+		if (state_ == SimInterfaceReceivingData || state_ == SimInterfaceInFlight)
 			return &data_;
 		return nullptr;
 	}
-	const std::wstring& getConnectResult() const { return connect_result_;  }
+	SimulatorInterfaceState getState() const { return state_;  }
+	const std::wstring& getStatusMessage() const;
+
+	// Callbacks from the SimConnect dispatch proc
+	void setSimData(const SimData* simData);
+	void onSimDisconnect();
 
 private:
 	bool positionIsValid();
+	HRESULT buildDefinition();
 
 	SimulatorCallbacks* callbacks_;
 	Broadcaster* broadcaster_;
-	bool connected_ = false;
-	bool has_data_ = false;
 	HANDLE sim_ = INVALID_HANDLE_VALUE;
 	long message_ordinal_ = 0;
-	std::wstring connect_result_;
+	SimulatorInterfaceState state_ = SimInterfaceDisconnected;
 	SimData data_;
 };
 

@@ -187,15 +187,6 @@ BOOL CALLBACK DialogProc( HWND hwndParam, UINT uMsg, WPARAM wParam, LPARAM lPara
 	return (BOOL) pdlg->handleWindowMessage( hwndParam, uMsg, wParam, lParam );
 }
 
-void DebugOut(LPCWSTR format ...) {
-	wchar_t buffer[1024];
-	va_list args;
-	va_start(args, format);
-	vswprintf_s(buffer, format, args);
-	va_end(args);
-	OutputDebugStringW(buffer);
-}
-
 App::~App() {
 }
 

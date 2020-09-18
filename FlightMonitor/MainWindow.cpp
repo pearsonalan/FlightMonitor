@@ -66,12 +66,12 @@ void MainWindow::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
 void MainWindow::onPaint(HWND hwnd) {
 	PAINTSTRUCT ps;
 	HDC hdc = BeginPaint(hwnd, &ps);
-	int posx = 10;
 
 	HFONT hFont = CreateFont(18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
 		DEFAULT_QUALITY, FIXED_PITCH, TEXT("Consolas"));
 
+	int posx = 40;
 	auto DrawAttribute = [&](LPCWSTR format, double value) {
 		wchar_t buf[1024];
 		_snwprintf_s(buf, 1023, _TRUNCATE, format, value);
@@ -80,40 +80,38 @@ void MainWindow::onPaint(HWND hwnd) {
 		posx += 20;
 	};
 
+	// Draw the status message
 	SelectObject(hdc, hFont);
 	if (sim_.isConnected()) {
 		SetTextColor(hdc, RGB(64, 255, 64));
-		DrawText(hdc, L"Connected", -1, (LPRECT)winfx::Rect(10, 10, 300, 30), 
-			DT_NOCLIP);
-
-		const SimData* const data = sim_.getData();
-		if (data) {
-			SetTextColor(hdc, RGB(0, 0, 0));
-			DrawAttribute(L"GPS ALT: %0.2f m", data->gps_alt);
-			DrawAttribute(L"GPS LAT: %0.4f", data->gps_lat);
-			DrawAttribute(L"GPS LON: %0.4f", data->gps_lon);
-			DrawAttribute(L"GPS TRK: %0.1f", data->gps_track);
-			DrawAttribute(L"GPS GS:  %0.1f m/s", data->gps_groundspeed);
-
-			posx += 10;
-			DrawAttribute(L"PITCH: %0.3f", data->pitch);
-			DrawAttribute(L"BANK:  %0.3f", data->bank);
-			DrawAttribute(L"HDG:   %0.1f", data->heading);
-		}
-	} else if (sim_.getConnectResult().empty()) {
-		SetTextColor(hdc, RGB(0, 0, 0));
-		DrawText(hdc, L"Not Connected", -1, (LPRECT)winfx::Rect(10, 10, 300, 30), 
-			DT_NOCLIP);
 	} else {
-		SetTextColor(hdc, RGB(255, 0, 0));
-		DrawText(hdc, sim_.getConnectResult().c_str(), -1, 
-			(LPRECT)winfx::Rect(10, 10, 300, 30), DT_NOCLIP);
+		SetTextColor(hdc, RGB(0, 0, 0));
 	}
+	DrawText(hdc, sim_.getStatusMessage().c_str(), -1, (LPRECT)winfx::Rect(10, 10, 300, 30),
+		DT_NOCLIP);
+	
+	// Draw the position if available.
+	const SimData* const data = sim_.getData();
+	if (data) {
+		SetTextColor(hdc, RGB(0, 0, 0));
+		DrawAttribute(L"GPS ALT: %0.2f m", data->gps_alt);
+		DrawAttribute(L"GPS LAT: %0.4f", data->gps_lat);
+		DrawAttribute(L"GPS LON: %0.4f", data->gps_lon);
+		DrawAttribute(L"GPS TRK: %0.1f", data->gps_track);
+		DrawAttribute(L"GPS GS:  %0.1f m/s", data->gps_groundspeed);
+
+		posx += 10;
+		DrawAttribute(L"PITCH: %0.3f", data->pitch);
+		DrawAttribute(L"BANK:  %0.3f", data->bank);
+		DrawAttribute(L"HDG:   %0.1f", data->heading);
+	}
+
 	DeleteObject(hFont);
 	EndPaint(hwnd, &ps);
 }
 
 void MainWindow::onDestroy(HWND hwnd) {
+	sim_.close();
 	PostQuitMessage(0);
 }
 
