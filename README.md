@@ -9,4 +9,4 @@ with ForeFlight on an iPhone or iPad device.
 
 ## License
 
-FlightMonitor is released under the GNU GPL v3.  See LICENSCE.txt for more information.
+FlightMonitor is released under the GNU GPL v3.  See LICENSE.txt for more information.
