@@ -27,8 +27,11 @@
 class MainWindow : public winfx::Window, public SimulatorCallbacks {
 public:
 	MainWindow() : 
-		winfx::Window(winfx::loadString(IDC_FLIGHTMONITOR), winfx::loadString(IDS_APP_TITLE)), 
-		sim_(&broadcaster_, this) {}
+		winfx::Window(winfx::loadString(IDC_FLIGHTMONITOR), winfx::loadString(IDS_APP_TITLE)),
+		broadcaster_(sim_) {
+		sim_.addCallback(this);
+		sim_.addCallback(&broadcaster_);
+	}
 
 	virtual void modifyWndClass(WNDCLASS& wc) override;
 	virtual LRESULT handleWindowMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;

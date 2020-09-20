@@ -150,7 +150,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="BroadcasterInterface.h" />
     <ClInclude Include="FlightMonitorApp.h" />
     <ClInclude Include="ForeFlightBroadcaster.h" />
     <ClInclude Include="framework.h" />

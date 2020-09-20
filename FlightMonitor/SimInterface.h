@@ -18,7 +18,6 @@
 #include "framework.h"
 #include "winfx.h"
 #include "SimData.h"
-#include "BroadcasterInterface.h"
 
 class SimulatorCallbacks {
 public:
@@ -35,12 +34,12 @@ enum SimulatorInterfaceState {
 
 class SimulatorInterface {
 public:
-	SimulatorInterface(Broadcaster* broadcaster, SimulatorCallbacks* callbacks) :
-		broadcaster_(broadcaster), callbacks_(callbacks) {}
-
 	HRESULT connectSim(HWND hwnd);
 	HRESULT pollSimulator();
 	void close();
+	void addCallback(SimulatorCallbacks* callback) {
+		callbacks_.push_back(callback);
+	}
 
 	bool isConnected() const { return state_ != SimInterfaceDisconnected;  }
 	const SimData* getData() const {
@@ -59,10 +58,8 @@ private:
 	bool positionIsValid();
 	HRESULT buildDefinition();
 
-	SimulatorCallbacks* callbacks_;
-	Broadcaster* broadcaster_;
+	std::vector<SimulatorCallbacks*> callbacks_;
 	HANDLE sim_ = INVALID_HANDLE_VALUE;
-	long message_ordinal_ = 0;
 	SimulatorInterfaceState state_ = SimInterfaceDisconnected;
 	SimData data_;
 };

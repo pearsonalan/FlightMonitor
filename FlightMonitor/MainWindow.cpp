@@ -19,6 +19,9 @@
 #include "ForeFlightBroadcaster.h"
 #include "Resource.h"
 
+constexpr int kPollTimerIntervalMs = 1000 / kAttitueReportsPerSecond;
+constexpr int kReconnectTimerIntervalMs = 5000;
+
 void MainWindow::modifyWndClass(WNDCLASS& wc) {
 	wc.lpszMenuName = MAKEINTRESOURCE(IDC_FLIGHTMONITOR);
 }
@@ -41,7 +44,7 @@ LRESULT MainWindow::onCreate(HWND hwndParam, LPCREATESTRUCT lpCreateStruct) {
 	// Attempt to connect to the simulator.
 	if (FAILED(connectSim())) {
 		// Set a timer to attempt to periodically retry connecting
-		SetTimer(hwndParam, ID_TIMER_SIM_CONNECT, 1000, NULL);
+		SetTimer(hwndParam, ID_TIMER_SIM_CONNECT, kReconnectTimerIntervalMs, NULL);
 	}
 
 	return winfx::Window::onCreate(hwndParam, lpCreateStruct);
@@ -133,7 +136,7 @@ void MainWindow::onDestroy(HWND hwnd) {
 HRESULT MainWindow::connectSim() {
 	HRESULT hr = sim_.connectSim(hwnd);
 	if (SUCCEEDED(hr)) {
-		SetTimer(hwnd, ID_TIMER_POLL_SIM, 250, NULL);
+		SetTimer(hwnd, ID_TIMER_POLL_SIM, kPollTimerIntervalMs, NULL);
 	}
 	return hr;
 }
@@ -148,7 +151,7 @@ void MainWindow::onSimDisconnect() {
 	KillTimer(hwnd, ID_TIMER_POLL_SIM);
 
 	// Set a timer to attempt to periodically retry connecting
-	SetTimer(hwnd, ID_TIMER_SIM_CONNECT, 1000, NULL);
+	SetTimer(hwnd, ID_TIMER_SIM_CONNECT, kReconnectTimerIntervalMs, NULL);
 
 	InvalidateRect(hwnd, NULL, TRUE);
 }

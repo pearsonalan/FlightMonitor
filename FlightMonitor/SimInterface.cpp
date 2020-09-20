@@ -80,7 +80,11 @@ void SimulatorInterface::setSimData(const SimData* simData) {
 	} else {
 		state_ = SimInterfaceInFlight;
 	}
-	callbacks_->onSimDataUpdated();
+
+	// Notify listeners of new data
+	for (SimulatorCallbacks* callback : callbacks_) {
+		callback->onSimDataUpdated();
+	}
 }
 
 void SimulatorInterface::onSimDisconnect() {
@@ -91,7 +95,9 @@ void SimulatorInterface::close() {
 	SimConnect_Close(sim_);
 	sim_ = INVALID_HANDLE_VALUE;
 	state_ = SimInterfaceDisconnected;
-	callbacks_->onSimDisconnect();
+	for (SimulatorCallbacks* callback : callbacks_) {
+		callback->onSimDisconnect();
+	}
 }
 
 HRESULT SimulatorInterface::pollSimulator() {
@@ -107,12 +113,6 @@ HRESULT SimulatorInterface::pollSimulator() {
 		return hr;
 	}
 	SimConnect_CallDispatch(sim_, SimDispatchProc, this);
-	if (state_ == SimInterfaceInFlight) {
-		if (message_ordinal_ % 4 == 0)
-			broadcaster_->broadcastPositionReport(&data_);
-		broadcaster_->broadcastAttitudeReport(&data_);
-		message_ordinal_++;
-	}
 	return S_OK;
 }
 

@@ -17,6 +17,8 @@
 #include "winfx.h"
 #include "ForeFlightBroadcaster.h"
 
+constexpr char SIM_NAME[] = "MSFS";
+
 HRESULT ForeFlightBroadcaster::InitWinsock() {
 	WORD wVersionRequested = MAKEWORD(2, 2);
 
@@ -62,7 +64,19 @@ HRESULT ForeFlightBroadcaster::init() {
 	return S_OK;
 }
 
-const char* SIM_NAME = "MSFS";
+void ForeFlightBroadcaster::onSimDataUpdated() {
+	const SimData* data = sim_.getData();
+	if (data != NULL && sim_.getState() == SimInterfaceInFlight) {
+		if (message_ordinal_ % kAttitueReportsPerSecond == 0)
+			broadcastPositionReport(data);
+		broadcastAttitudeReport(data);
+		message_ordinal_++;
+	}
+}
+
+void ForeFlightBroadcaster::onSimDisconnect() {
+
+}
 
 BOOL ForeFlightBroadcaster::broadcastPositionReport(const SimData* data) {
 	if (sock_ == INVALID_SOCKET) {

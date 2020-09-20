@@ -18,7 +18,7 @@
 #include "framework.h"
 #include "winfx.h"
 #include "SimData.h"
-#include "BroadcasterInterface.h"
+#include "SimInterface.h"
 
 // Implement ForeFlight GPS Integration as documented at
 //   https://support.foreflight.com/hc/en-us/articles/204115005-Flight-Simulator-GPS-Integration-UDP-Protocol-
@@ -26,16 +26,24 @@
 
 #define FF_GPS_PORT       49002
 
-class ForeFlightBroadcaster : public Broadcaster {
+constexpr int kAttitueReportsPerSecond = 5;
+
+class ForeFlightBroadcaster : public SimulatorCallbacks {
 public:
+	ForeFlightBroadcaster(const SimulatorInterface& sim) : sim_(sim) {}
+
 	static HRESULT InitWinsock();
 
 	HRESULT init();
-
-	BOOL broadcastPositionReport(const SimData* data) override;
-	BOOL broadcastAttitudeReport(const SimData* data) override;
+	void onSimDataUpdated() override;
+	void onSimDisconnect() override;
 
 private:
+	BOOL broadcastPositionReport(const SimData* data);
+	BOOL broadcastAttitudeReport(const SimData* data);
+
 	SOCKET sock_ = INVALID_SOCKET;
 	sockaddr_in send_addr_ = { 0 };
+	const SimulatorInterface& sim_;
+	long message_ordinal_ = 0;
 };

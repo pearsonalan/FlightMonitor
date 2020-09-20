@@ -42,9 +42,6 @@
     <ClInclude Include="SimData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BroadcasterInterface.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FlightMonitor.rc">
