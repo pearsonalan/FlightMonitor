@@ -24,9 +24,10 @@ BOOL CALLBACK DialogProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 Window::~Window() {
 }
 
-bool Window::create(LPWSTR pstrCmdLine, int nCmdShow ) {
+bool Window::create(LPWSTR pstrCmdLine, int nCmdShow) {
 	if (!classIsRegistered) {
 		if (!registerWindowClass()) {
+			winfx::DebugOut(L"Failed to register window class: %08x\n", GetLastError());
 			return false;
 		}
 	}
@@ -34,17 +35,19 @@ bool Window::create(LPWSTR pstrCmdLine, int nCmdShow ) {
 	Point pos = getDefaultWindowPosition();
 	Size  sz  = getDefaultWindowSize();
 		
-    hwnd = CreateWindow(className.c_str(), windowName.c_str(),
-						WS_OVERLAPPEDWINDOW,
-						pos.x, pos.y,
-						sz.cx, sz.cy,
-						HWND_DESKTOP, NULL,
-						App::getSingleton().getInstance(), this );
-
-    if (!hwnd)
+    hwnd = CreateWindowEx(WS_EX_APPWINDOW,
+		                  className.c_str(), windowName.c_str(),
+						  WS_OVERLAPPEDWINDOW,
+						  pos.x, pos.y,
+						  sz.cx, sz.cy,
+						  HWND_DESKTOP, NULL,
+						  App::getSingleton().getInstance(), this);
+	if (!hwnd) {
 		return false;
+		winfx::DebugOut(L"Could not create window\n");
+	}
 
-    ShowWindow(hwnd,nCmdShow);
+    ShowWindow(hwnd, nCmdShow);
 
     return true;
 }
@@ -67,7 +70,7 @@ LRESULT Window::onCreate(HWND hwndParam, LPCREATESTRUCT lpCreateStruct) {
 }
 
 bool Window::registerWindowClass() {
-	WNDCLASS wc;
+	WNDCLASSEXW wc = { sizeof(WNDCLASSEXW) };
 	 
 	// 
 	// Register window classes 
@@ -79,7 +82,8 @@ bool Window::registerWindowClass() {
 	wc.cbWndExtra	 = sizeof(void*);
 	wc.hInstance	 = App::getSingleton().getInstance();
 	wc.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
-	wc.hCursor       = LoadCursor(NULL, IDC_ARROW); 
+	wc.hIconSm       = LoadIcon(NULL, IDI_APPLICATION);
+	wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH) (COLOR_WINDOW + 1); 
 	wc.lpszMenuName  = 0; 
 	wc.lpszClassName = className.c_str(); 
@@ -93,14 +97,14 @@ bool Window::registerWindowClass() {
 	if (!wc.lpszClassName)
 		return false;
 	
-	if (!::RegisterClass(&wc)) 
+	if (!::RegisterClassEx(&wc)) 
 		return false; 
 
 	classIsRegistered = true;
 	return true;
 }
 
-void Window::modifyWndClass(WNDCLASS& wc) { 
+void Window::modifyWndClass(WNDCLASSEXW& wc) { 
 }
 
 LRESULT Window::handleWindowMessage(HWND hwndParam, UINT uMsg, WPARAM wParam, LPARAM lParam ) {

@@ -27,13 +27,15 @@
 class MainWindow : public winfx::Window, public SimulatorCallbacks {
 public:
 	MainWindow() : 
-		winfx::Window(winfx::loadString(IDC_FLIGHTMONITOR), winfx::loadString(IDS_APP_TITLE)),
+		winfx::Window(winfx::loadString(IDC_FLIGHTMONITOREX), winfx::loadString(IDS_APP_TITLE)),
 		broadcaster_(sim_) {
 		sim_.addCallback(this);
 		sim_.addCallback(&broadcaster_);
 	}
 
-	virtual void modifyWndClass(WNDCLASS& wc) override;
+	virtual void modifyWndClass(WNDCLASSEXW& wc) override;
+	virtual bool create(LPWSTR pstrCmdLine, int nCmdShow) override;
+
 	virtual LRESULT handleWindowMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) override;
 	virtual winfx::Size getDefaultWindowSize() override {
 		return winfx::Size(400, 300);
@@ -41,15 +43,22 @@ public:
 
 	LRESULT onCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct) override;
 
-	void onSimDataUpdated() override;
+	void onSimDataUpdated(const SimData* data) override;
+	void onStateChange(SimulatorInterfaceState state) override;
 	void onSimDisconnect() override;
 
 protected:
+	BOOL AddNotificationIcon();
+	BOOL DeleteNotificationIcon();
+	void ShowContextMenu(HWND hwnd, winfx::Point point);
+
 	HRESULT connectSim();
+	LRESULT onActivate(HWND hwnd, UINT state, HWND hwndActDeact, BOOL fMinimized);
 	void onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify);
 	void onDestroy(HWND hwnd);
 	void onPaint(HWND hwnd);
 	void onTimer(HWND hwnd, UINT idTimer);
+	void onNotifyCallback(HWND, UINT idNotify, winfx::Point point);
 
 private:
 	ForeFlightBroadcaster broadcaster_;

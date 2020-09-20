@@ -125,7 +125,7 @@ public:
 	virtual Point getDefaultWindowPosition();
 	virtual Size getDefaultWindowSize();
 		
-	virtual void modifyWndClass(WNDCLASS& wc);
+	virtual void modifyWndClass(WNDCLASSEXW& wc);
 	virtual LRESULT handleWindowMessage(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 };
 

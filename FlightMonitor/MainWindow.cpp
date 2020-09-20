@@ -19,20 +19,40 @@
 #include "ForeFlightBroadcaster.h"
 #include "Resource.h"
 
+// we need commctrl v6 for LoadIconMetric()
+#pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
+UINT const WMAPP_NOTIFYCALLBACK = WM_APP + 1;
+
+#define HANDLE_WMAPP_NOTIFYCALLBACK(hwnd, wParam, lParam, fn) \
+    ((fn)((hwnd), (DWORD)LOWORD(lParam), winfx::Point(LOWORD(wParam), HIWORD(wParam))), 0L)
+
 constexpr int kPollTimerIntervalMs = 1000 / kAttitueReportsPerSecond;
 constexpr int kReconnectTimerIntervalMs = 5000;
 
-void MainWindow::modifyWndClass(WNDCLASS& wc) {
+class __declspec(uuid("5a53c7ca-f57d-4ea2-ab43-4ab65994cb61")) AppIcon;
+
+void MainWindow::modifyWndClass(WNDCLASSEXW& wc) {
 	wc.lpszMenuName = MAKEINTRESOURCE(IDC_FLIGHTMONITOR);
+	wc.hIcon = ::LoadIcon(winfx::App::getSingleton().getInstance(), MAKEINTRESOURCE(IDI_AIRPLANE_GREEN));
+	wc.hIconSm = ::LoadIcon(winfx::App::getSingleton().getInstance(), MAKEINTRESOURCE(IDI_AIRPLANE_GREEN));
+
+}
+
+bool MainWindow::create(LPWSTR pstrCmdLine, int nCmdShow) {
+	// override create to always start hidden
+	return Window::create(pstrCmdLine, SW_HIDE);
 }
 
 LRESULT MainWindow::handleWindowMessage(HWND hwndParam, UINT uMsg, 
 										WPARAM wParam, LPARAM lParam) {
 	switch (uMsg) {
+		HANDLE_MSG(hwndParam, WM_ACTIVATE, onActivate);
 		HANDLE_MSG(hwndParam, WM_COMMAND, onCommand);
 		HANDLE_MSG(hwndParam, WM_DESTROY, onDestroy);
 		HANDLE_MSG(hwndParam, WM_PAINT, onPaint);
 		HANDLE_MSG(hwndParam, WM_TIMER, onTimer);
+		HANDLE_MSG(hwndParam, WMAPP_NOTIFYCALLBACK, onNotifyCallback);
 	}
 	return Window::handleWindowMessage(hwndParam, uMsg, wParam, lParam);
 }
@@ -47,7 +67,21 @@ LRESULT MainWindow::onCreate(HWND hwndParam, LPCREATESTRUCT lpCreateStruct) {
 		SetTimer(hwndParam, ID_TIMER_SIM_CONNECT, kReconnectTimerIntervalMs, NULL);
 	}
 
+	if (!AddNotificationIcon()) {
+		winfx::DebugOut(L"Failed to add notification icon\n");
+		return FALSE;
+	}
+
 	return winfx::Window::onCreate(hwndParam, lpCreateStruct);
+}
+
+LRESULT MainWindow::onActivate(HWND hwnd, UINT state, HWND hwndActDeact, BOOL fMinimized) {
+	winfx::DebugOut(L"onActivate state=%08x, fMinimized=%d\n", state, fMinimized);
+	if (state == WA_INACTIVE && fMinimized) {
+		ShowWindow(hwnd, SW_HIDE);
+		return 0;
+	}
+	return 1;
 }
 
 void MainWindow::onTimer(HWND hwndParam, UINT idTimer) {
@@ -75,9 +109,51 @@ void MainWindow::onCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify) {
 		AboutDialog(this).doDialogBox();
 		break;
 
+	case IDM_SHOWWINDOW:
+		ShowWindow(hwnd, SW_SHOWNORMAL);
+		break;
+
 	case IDM_EXIT:
 		destroy();
 		break;
+	}
+}
+
+void MainWindow::onNotifyCallback(HWND hwndParam, UINT idNotify, winfx::Point point) {
+	winfx::DebugOut(L"onNotifyCallback: %d\n", idNotify);
+	switch (idNotify) {
+	case NIN_SELECT:
+		break;
+
+	case WM_LBUTTONDBLCLK:
+		ShowWindow(hwnd, SW_SHOWNORMAL);
+		break;
+
+	case WM_CONTEXTMENU:
+		ShowContextMenu(hwnd, point);
+		break;
+	}
+}
+
+void MainWindow::ShowContextMenu(HWND hwnd, winfx::Point point) {
+	HMENU hMenu = LoadMenu(winfx::App::getSingleton().getInstance(), MAKEINTRESOURCE(IDC_CONTEXTMENU));
+	if (hMenu) {
+		HMENU hSubMenu = GetSubMenu(hMenu, 0);
+		if (hSubMenu) {
+			// our window must be foreground before calling TrackPopupMenu or the menu will not disappear when the user clicks away
+			SetForegroundWindow(hwnd);
+
+			// respect menu drop alignment
+			UINT uFlags = TPM_RIGHTBUTTON;
+			if (GetSystemMetrics(SM_MENUDROPALIGNMENT) != 0) {
+				uFlags |= TPM_RIGHTALIGN;
+			} else {
+				uFlags |= TPM_LEFTALIGN;
+			}
+
+			TrackPopupMenuEx(hSubMenu, uFlags, point.x, point.y, hwnd, NULL);
+		}
+		DestroyMenu(hMenu);
 	}
 }
 
@@ -129,8 +205,52 @@ void MainWindow::onPaint(HWND hwnd) {
 }
 
 void MainWindow::onDestroy(HWND hwnd) {
+	DeleteNotificationIcon();
 	sim_.close();
 	PostQuitMessage(0);
+}
+
+BOOL MainWindow::AddNotificationIcon() {
+	NOTIFYICONDATAW nid = { sizeof(nid) };
+
+	nid.hWnd = hwnd;
+	// add the icon, setting the icon, tooltip, and callback message.
+	// the icon will be identified with the GUID
+	nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_SHOWTIP | NIF_GUID;
+	nid.guidItem = __uuidof(AppIcon);
+	nid.uCallbackMessage = WMAPP_NOTIFYCALLBACK;
+	LoadIconMetric(winfx::App::getSingleton().getInstance(),
+		MAKEINTRESOURCE(IDI_AIRPLANE_RED), LIM_SMALL, &nid.hIcon);
+	LoadString(winfx::App::getSingleton().getInstance(), IDS_NOTCONNECTED,
+		nid.szTip, ARRAYSIZE(nid.szTip));
+
+	int tries = 0;
+	for (;;) {
+		if (Shell_NotifyIconW(NIM_ADD, &nid)) {
+			break;
+		}
+		winfx::DebugOut(L"AddNotifyIcon failed: %08X\n", GetLastError());
+		if (++tries == 1) {
+			// Try to delete the icon and re-create it
+			winfx::DebugOut(L"Deleting icon and retrying\n");
+			DeleteNotificationIcon();
+		} else {
+			// Give up...
+			winfx::DebugOut(L"Failed to create icon after retry.\n");
+			return FALSE;
+		}
+	}
+
+	// NOTIFYICON_VERSION_4 is prefered
+	nid.uVersion = NOTIFYICON_VERSION_4;
+	return Shell_NotifyIconW(NIM_SETVERSION | NIM_ADD, &nid);
+}
+
+BOOL MainWindow::DeleteNotificationIcon() {
+	NOTIFYICONDATA nid = { sizeof(nid) };
+	nid.uFlags = NIF_GUID;
+	nid.guidItem = __uuidof(AppIcon);
+	return Shell_NotifyIcon(NIM_DELETE, &nid);
 }
 
 HRESULT MainWindow::connectSim() {
@@ -141,9 +261,48 @@ HRESULT MainWindow::connectSim() {
 	return hr;
 }
 
-void MainWindow::onSimDataUpdated() {
+void MainWindow::onSimDataUpdated(const SimData* data) {
 	// When there is new data, invalidate the window to force a repaint.
 	InvalidateRect(hwnd, NULL, TRUE);
+}
+
+void MainWindow::onStateChange(SimulatorInterfaceState state) {
+	int icon;
+	int tooltip;
+
+	switch (state) {
+	case SimInterfaceDisconnected:
+		icon = IDI_AIRPLANE_RED;
+		tooltip = IDS_NOTCONNECTED;
+		break;
+
+	case SimInterfaceConnected:
+	case SimInterfaceReceivingData:
+		icon = IDI_AIRPLANE_YELLOW;
+		tooltip = IDS_CONNECTED;
+		break;
+
+	case SimInterfaceInFlight:
+		icon = IDI_AIRPLANE_GREEN;
+		tooltip = IDS_INFLIGHT;
+		break;
+
+	default:
+		return;
+	}
+
+	NOTIFYICONDATAW nid = { sizeof(nid) };
+	nid.hWnd = hwnd;
+	nid.uFlags = NIF_ICON | NIF_TIP | NIF_SHOWTIP | NIF_GUID;
+	nid.guidItem = __uuidof(AppIcon);
+	LoadIconMetric(winfx::App::getSingleton().getInstance(),
+		MAKEINTRESOURCE(icon), LIM_SMALL, &nid.hIcon);
+	LoadString(winfx::App::getSingleton().getInstance(), tooltip,
+		nid.szTip, ARRAYSIZE(nid.szTip));
+
+	if (!Shell_NotifyIconW(NIM_MODIFY, &nid)) {
+		winfx::DebugOut(L"Failed to modify notify icon.\n");
+	}
 }
 
 void MainWindow::onSimDisconnect() {

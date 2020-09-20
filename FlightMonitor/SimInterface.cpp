@@ -46,7 +46,7 @@ HRESULT SimulatorInterface::connectSim(HWND hwnd) {
 		return hr;
 	}
 
-	state_ = SimInterfaceConnected;
+	setState(SimInterfaceConnected);
 	return S_OK;
 }
 
@@ -76,14 +76,14 @@ const std::wstring& SimulatorInterface::getStatusMessage() const {
 void SimulatorInterface::setSimData(const SimData* simData) {
 	data_ = *simData;
 	if (!positionIsValid()) {
-		state_ = SimInterfaceReceivingData;
+		setState(SimInterfaceReceivingData);
 	} else {
-		state_ = SimInterfaceInFlight;
+		setState(SimInterfaceInFlight);
 	}
 
 	// Notify listeners of new data
 	for (SimulatorCallbacks* callback : callbacks_) {
-		callback->onSimDataUpdated();
+		callback->onSimDataUpdated(simData);
 	}
 }
 
@@ -91,10 +91,19 @@ void SimulatorInterface::onSimDisconnect() {
 	close();
 }
 
+void SimulatorInterface::setState(SimulatorInterfaceState state) {
+	if (state_ != state) {
+		state_ = state;
+		for (SimulatorCallbacks* callback : callbacks_) {
+			callback->onStateChange(state);
+		}
+	}
+}
+
 void SimulatorInterface::close() {
 	SimConnect_Close(sim_);
 	sim_ = INVALID_HANDLE_VALUE;
-	state_ = SimInterfaceDisconnected;
+	setState(SimInterfaceDisconnected);
 	for (SimulatorCallbacks* callback : callbacks_) {
 		callback->onSimDisconnect();
 	}

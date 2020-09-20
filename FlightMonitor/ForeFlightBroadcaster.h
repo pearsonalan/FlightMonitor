@@ -35,8 +35,9 @@ public:
 	static HRESULT InitWinsock();
 
 	HRESULT init();
-	void onSimDataUpdated() override;
-	void onSimDisconnect() override;
+	void onSimDataUpdated(const SimData* data) override;
+	void onStateChange(SimulatorInterfaceState state) override {}
+	void onSimDisconnect() override {}
 
 private:
 	BOOL broadcastPositionReport(const SimData* data);

@@ -19,17 +19,18 @@
 #include "winfx.h"
 #include "SimData.h"
 
-class SimulatorCallbacks {
-public:
-	virtual void onSimDataUpdated() = 0;
-	virtual void onSimDisconnect() = 0;
-};
-
 enum SimulatorInterfaceState {
 	SimInterfaceDisconnected = 0,
 	SimInterfaceConnected,
 	SimInterfaceReceivingData,
 	SimInterfaceInFlight
+};
+
+class SimulatorCallbacks {
+public:
+	virtual void onSimDataUpdated(const SimData* data) = 0;
+	virtual void onStateChange(SimulatorInterfaceState state) = 0;
+	virtual void onSimDisconnect() = 0;
 };
 
 class SimulatorInterface {
@@ -57,6 +58,7 @@ public:
 private:
 	bool positionIsValid();
 	HRESULT buildDefinition();
+	void setState(SimulatorInterfaceState state);
 
 	std::vector<SimulatorCallbacks*> callbacks_;
 	HANDLE sim_ = INVALID_HANDLE_VALUE;

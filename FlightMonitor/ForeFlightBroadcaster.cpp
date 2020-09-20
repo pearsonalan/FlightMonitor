@@ -64,18 +64,13 @@ HRESULT ForeFlightBroadcaster::init() {
 	return S_OK;
 }
 
-void ForeFlightBroadcaster::onSimDataUpdated() {
-	const SimData* data = sim_.getData();
-	if (data != NULL && sim_.getState() == SimInterfaceInFlight) {
+void ForeFlightBroadcaster::onSimDataUpdated(const SimData* data) {
+	if (sim_.getState() == SimInterfaceInFlight) {
 		if (message_ordinal_ % kAttitueReportsPerSecond == 0)
 			broadcastPositionReport(data);
 		broadcastAttitudeReport(data);
 		message_ordinal_++;
 	}
-}
-
-void ForeFlightBroadcaster::onSimDisconnect() {
-
 }
 
 BOOL ForeFlightBroadcaster::broadcastPositionReport(const SimData* data) {
