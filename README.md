@@ -11,7 +11,7 @@ with ForeFlight on an iPhone or iPad device.
 
 The FlightMonitor App sends UDP broadcasts to port 49002 for both position and
 attitude data. Attitude data needed for ForeFlight to show AHRS information is 
-broadcast 5 times per second. Position information is broadcast once persecond. 
+broadcast 5 times per second. Position information is broadcast once per second. 
 Integration is done using XGPS and XATTR text packets as documented at
 https://support.foreflight.com/hc/en-us/articles/204115005-Flight-Simulator-GPS-Integration-UDP-Protocol-
 
