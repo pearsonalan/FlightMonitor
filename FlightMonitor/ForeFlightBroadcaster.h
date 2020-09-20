@@ -20,11 +20,15 @@
 #include "SimData.h"
 #include "BroadcasterInterface.h"
 
+// Implement ForeFlight GPS Integration as documented at
+//   https://support.foreflight.com/hc/en-us/articles/204115005-Flight-Simulator-GPS-Integration-UDP-Protocol-
+//
+
 #define FF_GPS_PORT       49002
 
 class ForeFlightBroadcaster : public Broadcaster {
 public:
-	static int InitWinsock();
+	static HRESULT InitWinsock();
 
 	HRESULT init();
 

@@ -17,7 +17,7 @@
 #include "winfx.h"
 #include "ForeFlightBroadcaster.h"
 
-int ForeFlightBroadcaster::InitWinsock() {
+HRESULT ForeFlightBroadcaster::InitWinsock() {
 	WORD wVersionRequested = MAKEWORD(2, 2);
 
 	WSADATA wsaData;
@@ -25,10 +25,10 @@ int ForeFlightBroadcaster::InitWinsock() {
 	if (err != 0) {
 		// Tell the user that we could not find a usable Winsock DLL.
 		winfx::DebugOut(L"WSAStartup failed with error: %d\n", err);
-		return 1;
+		return E_FAIL;
 	}
 
-	return 0;
+	return S_OK;
 }
 
 HRESULT ForeFlightBroadcaster::init() {

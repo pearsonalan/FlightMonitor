@@ -20,7 +20,7 @@
 #include "Resource.h"
 
 bool FlightMonitorApp::initWindow(LPWSTR pwstrCmdLine, int nCmdShow) {
-	if (ForeFlightBroadcaster::InitWinsock() != 0) {
+	if (FAILED(ForeFlightBroadcaster::InitWinsock())) {
 		return false;
 	}
 	return mainWindow.create(pwstrCmdLine, nCmdShow);
