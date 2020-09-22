@@ -30,7 +30,16 @@ UINT const WMAPP_NOTIFYCALLBACK = WM_APP + 1;
 constexpr int kPollTimerIntervalMs = 1000 / kAttitueReportsPerSecond;
 constexpr int kReconnectTimerIntervalMs = 5000;
 
+// Ugly hack. The path to the executable is stored by the Shell when you call
+// Shell_NotifyIcon (https://docs.microsoft.com/en-us/windows/win32/api/shellapi/ns-shellapi-notifyicondataa#troubleshooting)
+// Since the Debug and Release versions compile to different locations, they have
+// to have different GUIDs. :-[
+//
+#ifdef _DEBUG
 class __declspec(uuid("5a53c7ca-f57d-4ea2-ab43-4ab65994cb61")) AppIcon;
+#else
+class __declspec(uuid("f0d5c17f-e9d7-42ce-ad26-b50a93f93f06")) AppIcon;
+#endif
 
 void MainWindow::modifyWndClass(WNDCLASSEXW& wc) {
 	wc.lpszMenuName = MAKEINTRESOURCE(IDC_FLIGHTMONITOR);
@@ -211,16 +220,20 @@ void MainWindow::onDestroy(HWND hwnd) {
 }
 
 BOOL MainWindow::AddNotificationIcon() {
+	HRESULT hr;
 	NOTIFYICONDATAW nid = { sizeof(nid) };
-
 	nid.hWnd = hwnd;
 	// add the icon, setting the icon, tooltip, and callback message.
 	// the icon will be identified with the GUID
 	nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_SHOWTIP | NIF_GUID;
 	nid.guidItem = __uuidof(AppIcon);
 	nid.uCallbackMessage = WMAPP_NOTIFYCALLBACK;
-	LoadIconMetric(winfx::App::getSingleton().getInstance(),
+	hr = LoadIconMetric(winfx::App::getSingleton().getInstance(),
 		MAKEINTRESOURCE(IDI_AIRPLANE_RED), LIM_SMALL, &nid.hIcon);
+	if (FAILED(hr)) {
+		winfx::DebugOut(L"Error loading icon: %08x\n", hr);
+		return FALSE;
+	}
 	LoadString(winfx::App::getSingleton().getInstance(), IDS_NOTCONNECTED,
 		nid.szTip, ARRAYSIZE(nid.szTip));
 
@@ -247,10 +260,10 @@ BOOL MainWindow::AddNotificationIcon() {
 }
 
 BOOL MainWindow::DeleteNotificationIcon() {
-	NOTIFYICONDATA nid = { sizeof(nid) };
+	NOTIFYICONDATAW nid = { sizeof(nid) };
 	nid.uFlags = NIF_GUID;
 	nid.guidItem = __uuidof(AppIcon);
-	return Shell_NotifyIcon(NIM_DELETE, &nid);
+	return Shell_NotifyIconW(NIM_DELETE, &nid);
 }
 
 HRESULT MainWindow::connectSim() {
